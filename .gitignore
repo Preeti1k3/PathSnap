@@ -97,3 +97,9 @@ Desktop.ini
 local_test/
 scratch/
 
+
+# Data may be supplied outside or nested beside the repository.
+**/evaluator_test/
+
+# Keep the recorded training log as a required experiment artifact.
+!artifacts/training.log

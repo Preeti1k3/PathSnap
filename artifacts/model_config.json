@@ -1,35 +1,116 @@
 {
-  "winner": "Random Forest",
-  "best_params": {
-    "n_estimators": 60,
-    "max_depth": 14,
-    "min_samples_split": 3,
-    "max_features": 0.6571
+  "selected_model": "hist_gradient_boosting",
+  "algorithm_family": "boosting ensemble",
+  "initial_configuration": {
+    "max_iter": 100,
+    "learning_rate": 0.08,
+    "max_leaf_nodes": 15,
+    "l2_regularization": 1.0
   },
-  "cv_best_score": 0.7892,
-  "features": [
-    "perp_dist",
-    "along_ratio",
-    "arc_length",
-    "dist_start",
-    "dist_end",
-    "cos_heading_diff",
-    "gps_speed",
-    "dist_rank",
-    "norm_time"
-  ],
+  "model_explanations": {
+    "logistic_regression": {
+      "family": "linear probabilistic",
+      "description": "Scaled logistic regression; class-balanced binary candidate scoring.",
+      "initial_parameters": {
+        "C": 1.0,
+        "max_iter": 500,
+        "class_weight": "balanced"
+      },
+      "objective": "binary cross-entropy (logistic loss)",
+      "strengths": "Fast inference, transparent feature effects, and a well-defined candidate probability.",
+      "limitations": "A linear decision boundary may miss interactions between heading, geometry, and speed; balanced fitting can affect probability calibration."
+    },
+    "gaussian_nb": {
+      "family": "probabilistic",
+      "description": "Gaussian Naive Bayes over candidate geometry/motion features.",
+      "initial_parameters": {
+        "var_smoothing": 1e-09
+      },
+      "objective": "maximum likelihood under class-conditional Gaussian features",
+      "strengths": "Very fast to train and score; produces probabilities with little tuning.",
+      "limitations": "Conditional independence and Gaussian feature assumptions are restrictive for correlated road geometry and motion features."
+    },
+    "decision_tree": {
+      "family": "tree-based",
+      "description": "Shallow CART tree with balanced classes to limit majority-class bias.",
+      "initial_parameters": {
+        "criterion": "gini",
+        "max_depth": 12,
+        "min_samples_leaf": 5,
+        "class_weight": "balanced"
+      },
+      "objective": "Gini impurity",
+      "strengths": "Captures nonlinear thresholds and is easy to inspect.",
+      "limitations": "A single tree can be unstable and can overfit local candidate patterns."
+    },
+    "extra_trees": {
+      "family": "randomized ensemble",
+      "description": "Extremely randomized trees with balanced bootstrap samples.",
+      "initial_parameters": {
+        "n_estimators": 100,
+        "min_samples_leaf": 2,
+        "max_features": "sqrt",
+        "class_weight": "balanced"
+      },
+      "objective": "averaged impurity-reduction trees",
+      "strengths": "Captures nonlinear interactions and reduces single-tree variance.",
+      "limitations": "Larger model and slower scoring than linear/probabilistic baselines; raw probabilities may need calibration."
+    },
+    "hist_gradient_boosting": {
+      "family": "boosting ensemble",
+      "description": "Histogram gradient boosting with shallow leaves and regularization.",
+      "initial_parameters": {
+        "max_iter": 100,
+        "learning_rate": 0.08,
+        "max_leaf_nodes": 15,
+        "l2_regularization": 1.0
+      },
+      "objective": "binomial deviance (log loss)",
+      "strengths": "Captures nonlinear feature interactions with regularized additive trees.",
+      "limitations": "More costly to fit and tune; learned candidate scores still need a sequential decoder for route coherence."
+    }
+  },
+  "best_bayesian_parameters": {
+    "l2_regularization": 1.537948446580078,
+    "learning_rate": 0.15691092804434043,
+    "max_leaf_nodes": 14
+  },
+  "bayesian_search_space": "max_leaf_nodes: integer [7, 31]; learning_rate: log-uniform [0.025, 0.2]; l2_regularization: log-uniform [1e-4, 10]",
+  "bayesian_objective": "candidate-level macro F1",
+  "bayesian_best_cv_score": 0.7780143005663183,
+  "bayesian_trials": 8,
+  "bayesian_search_seconds": 48.05523300002096,
+  "bayesian_cv_folds": 4,
+  "cv_folds": 5,
+  "cv_group": "trip_id",
   "seed": 42,
-  "tuned_student_test": {
-    "candidate_precision": 0.6453,
-    "candidate_recall": 0.9575,
-    "candidate_f1": 0.7712,
-    "candidate_macro_f1": 0.8655,
-    "candidate_log_loss": 0.1401,
-    "top1_accuracy": 0.8289,
-    "candidate_miss_rate": 0.0425,
-    "classifier_route_continuity": 0.412,
-    "hmm_top1_accuracy": 0.8415,
-    "hmm_route_continuity": 0.895,
-    "inference_seconds": 0.1525
-  }
+  "max_train_observations_per_trip": 400,
+  "decoder_transition_weight": 1.8,
+  "decoder_selection_rule": "Maximize route continuity subject to no more than a 0.03 Top-1 accuracy drop from independent candidate ranking, using student-test development data.",
+  "student_test_tuned_metrics": {
+    "candidate_accuracy": 0.8841727557411273,
+    "candidate_precision": 0.4929914637603553,
+    "candidate_recall": 0.904211681784043,
+    "candidate_f1": 0.638087084148728,
+    "candidate_macro_f1": 0.7845702911734072,
+    "candidate_log_loss": 0.25327022278342054,
+    "tn": 119875,
+    "fp": 16096,
+    "fn": 1658,
+    "tp": 15651,
+    "top1_accuracy": 0.6961377870563674,
+    "observation_macro_f1": 0.517216183996252,
+    "observation_log_loss": 3.3823555643770202,
+    "candidate_miss_rate": 0.09660751565762005,
+    "classifier_route_continuity": 0.8763446475195823,
+    "hmm_top1_accuracy": 0.6775052192066806,
+    "hmm_macro_f1": 0.5180394563324746,
+    "hmm_route_continuity": 0.977023498694517,
+    "classifier_exact_sequence_rate": 0.0,
+    "hmm_exact_sequence_rate": 0.0,
+    "inference_seconds": 0.09999049894395284,
+    "inference_ms_per_observation": 0.005218710800832612
+  },
+  "python_version": "3.12.13 (main, Mar  3 2026, 12:39:30) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "sklearn_version": "1.9.1"
 }
