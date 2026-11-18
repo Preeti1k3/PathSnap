@@ -104,3 +104,12 @@ The **Local trip preview** tab is dependency-free and can display files from one
 ## Report
 
 `build_report.py` generates `artifacts/PathSnap_Technical_Report.pdf` from the measured CSVs, plots, configuration, and map export. The team must review the interpretation, capture a live evaluator UI/API screenshot during the two-laptop demonstration, and disclose AI assistance as required by the event policy. Every member should be able to explain the submitted implementation and measurements.
+
+## Team Members
+
+| SRN | Name |
+|---|---|
+| PES1UG24AM202 | Pravith Mohandas |
+| PES1UG24AM203 | Preeti Kalburgi |
+| PES1UG24AM204 | Prithvi Raj K |
+| PES1UG24AM205 | Prithvi Warrier |
