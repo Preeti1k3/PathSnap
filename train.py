@@ -170,3 +170,4 @@ def main():
 
 if __name__=="__main__": main()
 
+# Retained Bayesian hyperparameter optimization search trials
