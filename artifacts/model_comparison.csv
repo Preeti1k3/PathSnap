@@ -1,0 +1,7 @@
+Model,Algorithm Family,CV Macro F1-score,Top-1 Accuracy (%),Student-Test Macro F1-score,Precision,Recall,Log Loss,Route continuity,Training Time (s),Inference Time (s)
+Logistic Regression,Linear/Probabilistic,0.7251,80.71,0.7699,0.4604,0.9761,0.2599,Verified (via HMM),10.53,0.0014
+Random Forest,Ensemble,0.7892,82.89,0.8655,0.6453,0.9575,0.1401,Verified (via HMM),40.6,0.1525
+Extra Trees,Tree-based,0.7706,82.64,0.8358,0.5777,0.9708,0.1887,Verified (via HMM),13.14,0.1408
+K-Nearest Neighbors,Instance-based,0.6881,50.9,0.7212,0.5123,0.5052,0.3554,Verified (via HMM),12.73,2.4355
+MLP Neural Net,Neural Networks,0.7805,82.51,0.9185,0.9378,0.7855,0.0943,Verified (via HMM),58.62,0.0338
+XGBoost,Boosting,0.7857,82.1,0.8701,0.6582,0.9518,0.1242,Verified (via HMM),1.6,0.0166
