@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PathSnap</title>
+<style>
+:root{color-scheme:light;--ink:#172a35;--muted:#62727b;--teal:#087e78;--line:#dbe4e7;--paper:#fff;--bg:#eef3f4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:#123d45;color:white;padding:22px max(22px,calc((100vw - 1100px)/2));display:flex;align-items:center;gap:14px}header .mark{width:42px;height:42px;border-radius:13px;background:#34c5af;display:grid;place-items:center;color:#073e40;font-size:22px;font-weight:800}h1{font-size:21px;margin:0}header p{margin:2px 0 0;color:#c8dedd;font-size:13px}
+main{max-width:1100px;margin:26px auto;padding:0 18px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:0 3px 12px #14323b08}.panel h2{font-size:17px;margin:0 0 6px}.sub{color:var(--muted);margin:0 0 16px;font-size:13px}
+.tabs{display:flex;gap:8px;border-bottom:1px solid var(--line);margin-bottom:18px}.tab{border:0;background:none;color:var(--muted);padding:10px 13px;border-radius:8px 8px 0 0;margin:0}.tab.active{background:#e6f4f2;color:#075b58;font-weight:650}.mode[hidden]{display:none}
+input,select,button{font:inherit;border:1px solid #cbd7db;border-radius:8px;padding:10px 12px;background:white;color:var(--ink)}button{cursor:pointer}button.primary{background:var(--teal);color:white;border-color:var(--teal);font-weight:600}button:hover{filter:brightness(.97)}.row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.row label{font-size:13px;font-weight:600}.row input[type=url]{min-width:min(400px,80vw)}.row input[type=file]{max-width:100%}.status{color:var(--muted);font-size:13px;min-height:22px;margin:12px 0 0}.status.error{color:#ad3325}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:16px 0}.metric{border:1px solid var(--line);background:#f8fafb;border-radius:10px;padding:12px}.metric b{font-size:19px;display:block;color:#123d45}.metric span{font-size:12px;color:var(--muted)}
+.mapbox{border:1px solid var(--line);border-radius:12px;background:#f8fbfc;overflow:hidden}.mapbox svg{display:block;width:100%;height:auto;min-height:320px}.legend{display:flex;flex-wrap:wrap;gap:18px;padding:10px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}.key{display:inline-block;width:16px;height:4px;vertical-align:middle;margin-right:6px;border-radius:3px}.api-map{width:100%;height:510px;border:1px solid var(--line);border-radius:12px}.notice{padding:10px 12px;border-radius:8px;background:#fff7e3;color:#765413;font-size:13px;margin-top:14px}footer{max-width:1100px;margin:0 auto 30px;padding:0 18px;color:var(--muted);font-size:12px}
+@media(max-width:620px){main{margin-top:14px}.panel{padding:16px}.api-map{height:400px}header{padding:16px 18px}}
+</style>
+</head>
+<body>
+<header><div class="mark">P</div><div><h1>PathSnap</h1><p>GPS trajectory and road network explorer</p></div></header>
+<main>
+  <section class="panel">
+    <div class="tabs" role="tablist"><button class="tab active" data-mode="api">Evaluator UI</button><button class="tab" data-mode="preview">Local trip preview</button></div>
+    <div class="mode" id="api-mode">
+      <h2>Evaluator route matching</h2>
+      <p class="sub">This is the Laptop 2 interface. Connect to the API running on Laptop 1 to load its ten evaluator trips.</p>
+      <div class="row"><label for="api-url">Laptop 1 API</label><input id="api-url" type="url" value="" placeholder="http://192.168.1.20:8000"><button id="load-trips">Load trips</button></div>
+      <div class="row" style="margin-top:12px"><select id="api-trip" aria-label="Evaluator trip"><option value="">Connect to Laptop 1 first</option></select><button id="predict-button" class="primary">Match route</button></div>
+      <p class="status" id="api-status">Enter Laptop 1's network address, then load the evaluator trips.</p>
+      <div class="metrics" id="api-metrics" hidden></div>
+      <iframe class="api-map" id="api-map" title="Predicted route map" hidden></iframe>
+      <pre id="api-detail" hidden></pre>
+      <div class="notice">Evaluator IDs and predictions are sent to Laptop 1. Ground-truth labels remain on the API server.</div>
+    </div>
+    <div class="mode" id="preview-mode" hidden>
+      <h2>Preview a trip on this computer</h2>
+      <p class="sub">Choose the .track, .nodes, .arcs, and .route files for one trip together. Files are read in your browser and are not uploaded.</p>
+      <div class="row"><input id="trip-folder" type="file" multiple accept=".track,.nodes,.arcs,.route" aria-label="Choose trip files"><button id="preview-button" class="primary">Show trip</button></div>
+      <p class="status" id="preview-status">Select a trip folder to view its GPS trace and supplied reference route.</p>
+      <div class="metrics" id="preview-metrics" hidden></div>
+      <div class="mapbox" id="preview-map" hidden>
+        <svg id="plot" viewBox="0 0 960 560" role="img" aria-label="Trip map"></svg>
+        <div class="legend"><span><i class="key" style="background:#99a7ad"></i>Road network</span><span><i class="key" style="background:#087e78"></i>GPS trace</span><span><i class="key" style="background:#ed8b36"></i>Supplied reference route</span></div>
+      </div>
+      <div class="notice">Local preview only: the orange line is the trip’s supplied reference route, not a model prediction. Use Model API mode for model inference.</div>
+    </div>
+  </section>
+</main>
+<footer>Local trip preview runs entirely in this browser. Model inference requires a running PathSnap API and trained model.</footer>
+<script>
+const $=s=>document.querySelector(s);
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));
+  $('#preview-mode').hidden=btn.dataset.mode!=='preview';$('#api-mode').hidden=btn.dataset.mode!=='api';
+}));
+function parseRows(text, columns){return text.trim().split(/\r?\n/).filter(Boolean).map(line=>line.trim().split(/\s+/).slice(0,columns).map(Number)).filter(row=>row.length===columns&&row.every(Number.isFinite));}
+function setStatus(el,msg,error=false){el.textContent=msg;el.classList.toggle('error',error)}
+function linePath(points,xy){return points.map((p,i)=>`${i?'L':'M'}${xy(p[0],p[1])}`).join(' ')}
+function showTrip(){
+  const files=[...$('#trip-folder').files], status=$('#preview-status');
+  if(!files.length){setStatus(status,'Choose a trip folder first.',true);return}
+  const byExt={};for(const f of files){const m=f.name.match(/\.(track|nodes|arcs|route)$/);if(m)byExt[m[1]]=f}
+  if(!byExt.track||!byExt.nodes||!byExt.arcs){setStatus(status,'Folder needs matching .track, .nodes, and .arcs files. The .route file is optional.',true);return}
+  Promise.all(Object.entries(byExt).map(async([k,f])=>[k,await f.text()])).then(entries=>{
+    const data=Object.fromEntries(entries),gps=parseRows(data.track,3),nodes=parseRows(data.nodes,2),arcs=parseRows(data.arcs,2).map(a=>a.map(Math.trunc)),route=data.route?parseRows(data.route,1).map(a=>Math.trunc(a[0])):[];
+    if(!gps.length||!nodes.length){setStatus(status,'Could not read valid GPS points or road nodes from these files.',true);return}
+    const coords=[...gps.map(p=>p.slice(0,2)),...nodes];let minX=Math.min(...coords.map(p=>p[0])),maxX=Math.max(...coords.map(p=>p[0])),minY=Math.min(...coords.map(p=>p[1])),maxY=Math.max(...coords.map(p=>p[1]));
+    const W=960,H=560,pad=28,scale=Math.min((W-2*pad)/(maxX-minX||1),(H-2*pad)/(maxY-minY||1)),ox=(W-(maxX-minX)*scale)/2,oy=(H-(maxY-minY)*scale)/2;
+    const xy=(lon,lat)=>`${(ox+(lon-minX)*scale).toFixed(1)},${(H-oy-(lat-minY)*scale).toFixed(1)}`;
+    const svg=$('#plot');svg.replaceChildren();
+    const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');bg.setAttribute('width',W);bg.setAttribute('height',H);bg.setAttribute('fill','#f8fbfc');svg.append(bg);
+    let roadD='';const stride=Math.max(1,Math.ceil(arcs.length/15000));
+    arcs.forEach((edge,i)=>{if(i%stride||edge[0]<0||edge[1]<0||edge[0]>=nodes.length||edge[1]>=nodes.length)return;roadD+=`M${xy(...nodes[edge[0]])}L${xy(...nodes[edge[1]])}`});
+    const addPath=(d,color,width,opacity)=>{if(!d)return;const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',d);p.setAttribute('fill','none');p.setAttribute('stroke',color);p.setAttribute('stroke-width',width);p.setAttribute('stroke-opacity',opacity);p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');svg.append(p)};
+    addPath(roadD,'#99a7ad',.7,.42);addPath(linePath(gps,xy),'#087e78',2.4,.9);
+    let routeD='';for(const id of route){if(id>=0&&id<arcs.length){const e=arcs[id];if(e[0]>=0&&e[1]>=0&&e[0]<nodes.length&&e[1]<nodes.length)routeD+=`M${xy(...nodes[e[0]])}L${xy(...nodes[e[1]])}`}}
+    addPath(routeD,'#ed8b36',3,.92);
+    for(const [point,color] of [[gps[0],'#087e78'],[gps[gps.length-1],'#ad3325']]){const c=document.createElementNS('http://www.w3.org/2000/svg','circle');const [cx,cy]=xy(...point).split(',');c.setAttribute('cx',cx);c.setAttribute('cy',cy);c.setAttribute('r',5);c.setAttribute('fill',color);svg.append(c)}
+    const m=$('#preview-metrics');m.innerHTML='';[[gps.length,'GPS observations'],[nodes.length.toLocaleString(),'road nodes'],[arcs.length.toLocaleString(),'road segments'],[route.length.toLocaleString(),'reference route segments']].forEach(([v,l])=>{const card=document.createElement('div');card.className='metric';card.innerHTML=`<b>${v}</b><span>${l}</span>`;m.append(card)});m.hidden=false;$('#preview-map').hidden=false;
+    const tripName=files[0].name.split('.')[0]||'selected trip';setStatus(status,`Showing ${tripName}. No files were uploaded.`);
+  }).catch(e=>setStatus(status,'Could not read trip files: '+e.message,true));
+}
+$('#preview-button').addEventListener('click',showTrip);
+const api=()=>$('#api-url').value.replace(/\/$/,'');
+$('#load-trips').addEventListener('click',async()=>{const s=$('#api-status');if(!api()){setStatus(s,'Enter Laptop 1’s address first, for example http://192.168.1.20:8000.',true);return}try{setStatus(s,'Connecting to API…');const r=await fetch(api()+'/trips');const d=await r.json();if(!r.ok)throw Error(d.detail||r.statusText);const select=$('#api-trip');select.replaceChildren();(d.trips||[]).forEach(t=>{const o=document.createElement('option');o.value=t.trip_id;o.textContent=`${t.trip_id} (${t.observations} GPS fixes)`;select.append(o)});setStatus(s,d.message||`${d.trips.length} trips ready.`)}catch(e){setStatus(s,'Could not reach API: '+e.message,true)}});
+$('#predict-button').addEventListener('click',async()=>{const s=$('#api-status'),id=$('#api-trip').value;if(!id){setStatus(s,'Load and select a trip first.',true);return}try{setStatus(s,'Matching route…');const r=await fetch(api()+'/predict/'+encodeURIComponent(id),{method:'POST'}),d=await r.json();if(!r.ok)throw Error(d.detail||r.statusText);const m=$('#api-metrics');m.replaceChildren();Object.entries(d.metrics).forEach(([k,v])=>{const card=document.createElement('div');card.className='metric';const value=v==null?'N/A':`${(v*100).toFixed(2)}%`;card.innerHTML=`<b>${value}</b><span>${k.replaceAll('_',' ')}</span>`;m.append(card)});m.hidden=false;$('#api-map').srcdoc=d.map_html;$('#api-map').hidden=false;const detail=$('#api-detail');detail.textContent=`Trip ${d.trip_id}\nPredicted road segments: ${d.predicted_arc_ids.length}\nGround-truth labels are scored inside the API server.`;detail.hidden=false;setStatus(s,'Route reconstructed. Ground-truth labels stay on the API server.')}catch(e){setStatus(s,'Prediction failed: '+e.message,true)}});
+</script>
+</body></html>

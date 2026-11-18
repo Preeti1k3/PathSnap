@@ -1,3 +1,3 @@
-partition,trips,gps_observations,mean_observations,nodes_mean,arcs_mean
-student_test,10,19160,1916.0,9068.9,18504.1
-train,80,208417,2605.21,24168.56,48461.3
+partition,trips,gps_rows,clean_observations,mean_observations,invalid_gps_rows,gaps_over_5s,gaps_over_30s,nodes,arcs,route_arcs,isolated_nodes,active_components_sum,track_bytes,nodes_bytes,arcs_bytes,route_bytes
+student_test,10,19160,19160,1916.0,0,44,2,90689,185041,3477,0,227,625911,1822179,1902157,18344
+train,80,208417,208417,2605.2125,0,1216,133,1933485,3876904,31336,0,3121,6872352,38431647,44267751,165702

@@ -1,0 +1,6 @@
+model,tn,fp,fn,tp
+logistic_regression,113138,22833,1859,15450
+gaussian_nb,121094,14877,3882,13427
+decision_tree,119327,16644,2091,15218
+extra_trees,124907,11064,2867,14442
+hist_gradient_boosting,119795,16176,1649,15660
