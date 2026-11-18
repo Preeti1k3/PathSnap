@@ -339,3 +339,123 @@ def predict(req: PredictRequest, request: Request):
         "gps_points": gps_points,
         "route_geometry": route_geometry,
     }
+
+
+class EvaluateRequest(BaseModel):
+    trip_id: str = Field(..., description="Unique trip directory identifier to evaluate")
+    k_candidates: int = Field(8, description="Number of road candidates per GPS fix")
+
+
+@app.post("/evaluate")
+def evaluate(req: EvaluateRequest, request: Request):
+    """
+    Evaluates model predictions and Viterbi route reconstruction against
+    server-side reference route data.
+
+    SECURITY REQUIREMENT:
+    Reference route labels (.route) are read strictly on Laptop 1 and are
+    NEVER returned in the API response or transmitted to Laptop 2 / client UI.
+    Only calculated performance metrics are returned.
+    """
+    t0 = time.time()
+    trip_data = load_raw_trip_data(req.trip_id)
+    folder = trip_data["folder"]
+    route_path = folder / f"{req.trip_id}.route"
+
+    if not route_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Reference route '{req.trip_id}.route' not found on server for evaluation."
+        )
+
+    # 1. Read ground-truth reference route strictly on the server
+    ref_df = pd.read_csv(route_path, sep=r"\s+", header=None)
+    reference_route = ref_df.iloc[:, 0].to_numpy(int).tolist()
+
+    track = trip_data["track"]
+    arcs = trip_data["arcs"]
+    nodes = trip_data["nodes"]
+
+    # 2. Candidate Generation & Feature Extraction
+    df_cands = generate_candidate_features(trip_data, k=req.k_candidates)
+
+    # 3. Model Scoring
+    feature_cols = ["distance_m", "heading_error", "edge_length_m", "speed_mps", "time_gap_s", "candidate_rank"]
+    model = get_model()
+
+    if model is not None and hasattr(model, "predict_proba"):
+        X = df_cands[feature_cols].to_numpy()
+        probs = model.predict_proba(X)[:, 1]
+    else:
+        d = df_cands["distance_m"].to_numpy(float)
+        h = df_cands["heading_error"].to_numpy(float)
+        scores = np.exp(-0.5 * (d / 15.0) ** 2) * np.cos(np.minimum(h, np.pi / 2))
+        probs = np.maximum(scores, 1e-6)
+
+    df_cands["score"] = probs
+
+    # 4. Extract candidates, probabilities, and pointwise predictions
+    candidate_arcs_per_step: List[List[int]] = []
+    candidate_probs_per_step: List[List[float]] = []
+    raw_top1_arcs: List[int] = []
+    ref_pointwise: Optional[List[int]] = None
+
+    if "reference_arc_id" in df_cands.columns:
+        ref_pointwise = []
+
+    for _, group in df_cands.groupby("obs"):
+        c_list = group["arc_id"].tolist()
+        p_list = group["score"].tolist()
+        candidate_arcs_per_step.append(c_list)
+        candidate_probs_per_step.append(p_list)
+        raw_top1_arcs.append(c_list[int(np.argmax(p_list))])
+        if ref_pointwise is not None:
+            ref_pointwise.append(int(group["reference_arc_id"].iloc[0]))
+
+    # 5. Sequence Decoding
+    timestamps = track["time"].tolist()
+    decoded_arcs = _decoder.decode(candidate_arcs_per_step, candidate_probs_per_step, arcs, timestamps)
+
+    # 6. Comprehensive Server-Side Comparison
+    comparison = _decoder.compare(
+        raw_classifier_arcs=raw_top1_arcs,
+        decoded_arcs=decoded_arcs,
+        reference_route=reference_route,
+        arcs=arcs,
+        reference_pointwise_arcs=ref_pointwise,
+    )
+
+    eval_ms = round((time.time() - t0) * 1000, 2)
+
+    logger.info(
+        f"POST /evaluate | Trip: {req.trip_id} | Ref Arcs: {len(reference_route)} | "
+        f"Viterbi F1: {comparison['route_f1']['viterbi_decoded']:.4f} "
+        f"(+{comparison['route_f1']['improvement']:.4f}) | "
+        f"Continuity: {comparison['continuity']['viterbi_decoded']:.4f} | {eval_ms}ms"
+    )
+
+    # Return approved evaluation metrics only - never reference route contents
+    return {
+        "trip_id": req.trip_id,
+        "status": "evaluated_server_side",
+        "reference_labels_protected": True,
+        "observation_count": len(track),
+        "ground_truth_route_arcs": len(reference_route),
+        "metrics": comparison,
+        "inference_time_ms": eval_ms,
+    }
+
+
+@app.post("/reload_model")
+def reload_model():
+    """Allows hot-reloading the model artifact after Person 2 completes training."""
+    global _model, _model_meta
+    _model = None
+    m = get_model()
+    return {
+        "status": "reloaded",
+        "model_loaded": _model_meta["loaded"],
+        "model_type": _model_meta["type"],
+        "model_path": _model_meta.get("path"),
+    }
+
