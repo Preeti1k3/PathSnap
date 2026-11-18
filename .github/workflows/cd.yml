@@ -1,0 +1,19 @@
+name: PathSnap CD
+
+on:
+  workflow_run:
+    workflows: ["PathSnap CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  cd:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify CD
+        run: echo "PathSnap CD pipeline is ready!"
