@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/Machine%20Learning-Scikit--learn-orange" alt="Machine Learning">
   <img src="https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi" alt="FastAPI">
   <img src="https://img.shields.io/badge/Frontend-HTML%20%7C%20CSS%20%7C%20JavaScript-yellow" alt="Frontend">
-  <img src="https://img.shields.io/badge/Status-In%20Development-yellow" alt="Project Status">
+  <img src="https://img.shields.io/badge/Status-In%20Development-yellow" alt="Project Status"> 
   <img src="https://img.shields.io/badge/Course-UE24CS352A-purple" alt="Course">
 </p>
 
